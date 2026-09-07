@@ -9,7 +9,7 @@ import vm from 'node:vm';
 
 const htmlPath = join(dirname(fileURLToPath(import.meta.url)), '..', 'index.html');
 const html = readFileSync(htmlPath, 'utf8');
-const m = html.match(/\/\* ===== CORE \(pure, tested in tests\/core\.test\.mjs\) ===== \*\/([\s\S]*?)\/\* ===== APP \(DOM\) ===== \*\//);
+const m = html.match(/\/\* ===== CORE[^\n]*===== \*\/([\s\S]*?)\/\* ===== APP[^\n]*\*\//);
 assert.ok(m, 'index.html 必须包含 CORE 标记段（供本测试提取）');
 const sandbox = {};
 sandbox.__export = (o) => Object.assign(sandbox, o);
@@ -42,17 +42,18 @@ test('computeStats：今日计数/时长、总时长按 focus 记录累计，cut
     cut(NOW - 600_000),                                  // 今天的中断，不计数
     { t: 'focus', at: NOW, min: 25, task: null },        // 今天，无任务 → 未分类
   ];
-  const s = computeStats(rs, NOW, settings);
+  const s = computeStats(rs, NOW);
   assert.equal(s.todayCount, 3);
   assert.equal(s.todayMin, 100);
   assert.equal(s.totalMin, 125);
+  assert.equal(s.todayCuts, 1);
   // vm 跨 realm 数组无法用 deepEqual 比引用结构，比较拼接结果
   assert.equal(s.byTask.map((x) => x.name).join(','), '高数,英语,未分类');
 });
 
 test('computeStats：7 天趋势以今天结尾、顺序正确', () => {
   const rs = [focus(NOW), focus(yesterday(1)), focus(yesterday(1)), focus(yesterday(6))];
-  const s = computeStats(rs, NOW, settings);
+  const s = computeStats(rs, NOW);
   assert.equal(s.trend.length, 7);
   assert.equal(s.trend[6].count, 1);
   assert.equal(s.trend[5].count, 2);
@@ -75,9 +76,9 @@ test('computeStats：连续打卡——今天有番茄则含今天；今天还�
 
 test('resolvePending：未确认的专注一律回填为中断，其余忽略（ADR-0003 严格规则）', () => {
   assert.equal(resolvePending(null, NOW), 'none');
-  assert.equal(resolvePending({ phase: 'focus', start: NOW - 600_000, end: NOW + 900_000 }, NOW), 'interrupt');
+  assert.equal(resolvePending({ phase: "focus", start: NOW - 600_000, end: NOW + 900_000 }), 'interrupt');
   // 即使计时早已走完、只差确认，也同样是中断：未经确认的专注不是番茄（CONTEXT.md）
-  assert.equal(resolvePending({ phase: 'focus', start: NOW - 3000_000, end: NOW - 600_000 }, NOW), 'interrupt');
+  assert.equal(resolvePending({ phase: "focus", start: NOW - 3000_000, end: NOW - 600_000 }), 'interrupt');
 });
 
 test('breakKindAfter：每 longEvery 个番茄进入长休', () => {

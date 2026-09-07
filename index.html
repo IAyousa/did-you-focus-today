@@ -200,7 +200,7 @@
 </div>
 
 <script>
-/* ===== CORE (pure, tested in tests/core.test.mjs) ===== */
+/* ===== CORE (pure, tested in tests/core.test.mjs) — 此标记行被测试正则依赖，勿改措辞 ===== */
 function pad2(n){ return String(n).padStart(2,'0'); }
 
 /* 本地时区的 YYYY-MM-DD，作为"一天"的键 */
@@ -217,17 +217,20 @@ function weekdayZh(day){ return '日一二三四五六'[day]; }
  */
 function computeStats(records, now){
   const today = dateKey(now);
-  let todayCount = 0, todayMin = 0, totalMin = 0;
+  let todayCount = 0, todayMin = 0, totalMin = 0, todayCuts = 0;
   const byTaskMap = new Map();
   const dayCount = new Map();
   for (const r of records){
-    if (r.t !== 'focus') continue;
-    totalMin += r.min;
-    const k = dateKey(r.at);
-    dayCount.set(k, (dayCount.get(k) || 0) + 1);
-    if (k === today){ todayCount++; todayMin += r.min; }
-    const name = (r.task && r.task.name) || '未分类';
-    byTaskMap.set(name, (byTaskMap.get(name) || 0) + 1);
+    if (r.t === 'focus'){
+      totalMin += r.min;
+      const k = dateKey(r.at);
+      dayCount.set(k, (dayCount.get(k) || 0) + 1);
+      if (k === today){ todayCount++; todayMin += r.min; }
+      const name = (r.task && r.task.name) || '未分类';
+      byTaskMap.set(name, (byTaskMap.get(name) || 0) + 1);
+    } else if (dateKey(r.at) === today){
+      todayCuts++;
+    }
   }
   const trend = [];
   for (let i = 6; i >= 0; i--){
@@ -243,7 +246,7 @@ function computeStats(records, now){
   const byTask = [...byTaskMap.entries()]
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count);
-  return { todayCount, todayMin, totalMin, streak, byTask, trend };
+  return { todayCount, todayMin, totalMin, todayCuts, streak, byTask, trend };
 }
 
 /*
@@ -281,13 +284,19 @@ const SETTING_BOUNDS = {
   focusMin:[1,180], shortMin:[1,60], longMin:[1,90], longEvery:[2,8], dailyGoal:[1,20],
 };
 
+function clampSetting(key, v){
+  const [lo, hi] = SETTING_BOUNDS[key];
+  const n = Math.round(Number(v));
+  return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : null;
+}
+
 function normalize(raw){
   const d = defaults();
   const s = { ...d.settings };
   if (raw && typeof raw.settings === 'object'){
     for (const k of Object.keys(SETTING_BOUNDS)){
-      const v = Math.round(Number(raw.settings[k]));
-      if (Number.isFinite(v)) s[k] = Math.min(SETTING_BOUNDS[k][1], Math.max(SETTING_BOUNDS[k][0], v));
+      const v = clampSetting(k, raw.settings[k]);
+      if (v !== null) s[k] = v;
     }
   }
   const tasks = Array.isArray(raw && raw.tasks)
@@ -354,6 +363,14 @@ function notify(title, body){
 /* ---------- 记录 ---------- */
 function pushRecord(r){ S.records.push(r); save(); renderStats(); }
 
+/* 三处落中断的唯一出口：主动放弃（此刻）、关页（关页时刻）、重开回填（专注可能仍在跑的最后时刻） */
+function recordCut(at){
+  S.records.push({ t:'cut', at });
+  S.pending = null;
+  save();
+  renderStats();
+}
+
 /* ---------- 阶段流转 ---------- */
 function startFocus(){
   ensureAudio();
@@ -377,7 +394,8 @@ function confirmAlert(){
   stopBell();
   if (ui.alertKind === 'focus'){
     const p = S.pending;
-    pushRecord({ t:'focus', at:Date.now(), min:p.min, task:p.task });
+    /* 归属到专注结束的时刻：23:5x 结束、跨零点才点确认，番茄仍算昨天（CONTEXT.md「完整完成的时段」） */
+    pushRecord({ t:'focus', at:p.end, min:p.min, task:p.task });
     S.cycle += 1;
     const kind = breakKindAfter(S.cycle, S.settings);
     if (kind === 'long') S.cycle = 0; /* 长休从现在开始，跳过它也算休过 */
@@ -402,8 +420,7 @@ function skipBreak(){
 }
 function abandonFocus(){
   stopBell();
-  pushRecord({ t:'cut', at:Date.now() });
-  S.pending = null; save();
+  recordCut(Date.now());
   ui.phase = 'idle';
   renderTimer();
   toast('已放弃，记一条中断。休息一下，再来一个。');
@@ -412,11 +429,7 @@ function abandonFocus(){
 /* 中途关页/刷新：立刻落一条中断（重开页面时的回填是崩溃场景的兜底） */
 window.addEventListener('pagehide', () => {
   if (S.pending && S.pending.phase === 'focus'){
-    try {
-      S.records.push({ t:'cut', at:Date.now() });
-      S.pending = null;
-      save();
-    } catch { /* 存不进去就算了，下次打开由回填兜底 */ }
+    try { recordCut(Date.now()); } catch { /* 存不进去就算了，下次打开由回填兜底 */ }
   }
 });
 window.addEventListener('pageshow', (e) => { if (e.persisted) location.reload(); });
@@ -509,8 +522,7 @@ function renderStats(){
   $('stTodayMin').textContent = fmtMin(st.todayMin);
   $('stTotalMin').textContent = fmtMin(st.totalMin);
   $('stStreak').textContent = st.streak + ' 天';
-  const today = dateKey(Date.now());
-  $('todayCuts').textContent = S.records.filter(r => r.t === 'cut' && dateKey(r.at) === today).length;
+  $('todayCuts').textContent = st.todayCuts;
 
   const dist = $('taskDist');
   if (!st.byTask.length){
@@ -538,10 +550,9 @@ function renderSettings(){
     const el = $(id);
     el.value = S.settings[key];
     el.addEventListener('change', () => {
-      const [lo, hi] = SETTING_BOUNDS[key];
-      const v = Math.round(Number(el.value));
-      el.value = Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : S.settings[key];
-      S.settings[key] = Number(el.value);
+      const v = clampSetting(key, el.value);
+      el.value = v === null ? S.settings[key] : v;
+      if (v !== null) S.settings[key] = v;
       save();
       renderStats();
       if (ui.phase === 'idle') renderTimer();
@@ -550,7 +561,7 @@ function renderSettings(){
 }
 function renderAll(){ renderTimer(); renderTaskUI(); renderStats(); }
 
-/* ---------- 主时钟：一律用墙钟时间差计算，后台标签页节流也不丢精度 ---------- */
+/* ---------- 主时钟：一律用墙钟时间差计算，后台标签限流也不丢时长精度（提醒可能延迟到回前台） ---------- */
 setInterval(() => {
   ui.blink = !ui.blink;
   if (ui.phase === 'focus' || ui.phase === 'break'){
@@ -638,9 +649,8 @@ function toast(msg){
 /* ---------- 启动：处置遗留的未确认专注 ---------- */
 (function boot(){
   if (resolvePending(S.pending) === 'interrupt'){
-    S.records.push({ t:'cut', at:Date.now() });
-    S.pending = null;
-    save();
+    /* 归属到专注可能还在跑的最后时刻：隔天重开不会把中断错记进今天 */
+    recordCut(Math.min(S.pending.end, Date.now()));
     setTimeout(() => toast('检测到上次有专注未经确认，已按规则回填为一条中断。'), 400);
   }
   renderSettings();
