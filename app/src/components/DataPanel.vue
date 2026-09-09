@@ -2,7 +2,7 @@
 // 数据卡：导出/导入备份。导入是唯一整体覆盖通道，必须显式确认（ADR-0002）
 import { ref } from 'vue';
 import { useStore } from '../composables/useStore';
-import { useToast } from '../composables/useToast';
+import { toast } from '../composables/useToast';
 import { dateKey } from '../lib/core';
 
 const { state, replaceAll } = useStore();

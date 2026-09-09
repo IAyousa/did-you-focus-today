@@ -3,7 +3,7 @@
 import { reactive, computed, watchEffect } from 'vue';
 import { useStore } from './useStore';
 import { useNow } from './useNow';
-import { useToast } from './useToast';
+import { toast } from './useToast';
 import { breakKindAfter, pad2 } from '../lib/core';
 
 const { state, save, pushRecord, recordCut } = useStore();
@@ -11,8 +11,8 @@ const now = useNow();
 
 /* ui.phase: idle | focus | break | alert；alert 时 alertKind: 'focus' | 'break' */
 const ui = reactive({ phase: 'idle', endsAt: 0, alertKind: null, breakKind: null });
-/* 调试/冒烟测试把手：外部拨快 endsAt 以验证提醒流转，正常使用不碰它 */
-window.__pty = { ui };
+/* 调试把手：仅开发构建暴露，用于冒烟测试拨快 endsAt 验证提醒流转 */
+if (import.meta.env.DEV) window.__pty = { ui };
 
 export function fmt(ms){
   const total = Math.max(0, Math.ceil(ms / 1000));

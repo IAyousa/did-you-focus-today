@@ -3,7 +3,6 @@
 import { computed, ref } from 'vue';
 import { useStore } from '../composables/useStore';
 import { toast } from '../composables/useToast';
-import { useToast } from '../composables/useToast';
 
 const { state, addTask, deleteTask } = useStore();
 const name = ref('');
