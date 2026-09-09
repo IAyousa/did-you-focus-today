@@ -1,5 +1,7 @@
 # 单文件 HTML + localStorage，不设后端
 
+Status: partially superseded by 0004（2026-09-09：交付形态改为 Vue 3 + Vite 静态部署；localStorage 数据选型与摩擦论证仍然有效）
+
 产品形态定为双击即用的单个 HTML 文件，数据存 localStorage。备选方案"本地小服务 + JSON 文件"数据更稳、可见、可自动备份，但每次使用前要先跑一条命令——摩擦是督促工具的第一死因，所以否决。清浏览器数据会连记录一起丢的风险，由页面上的导出/导入 JSON 按钮手动兜底。若未来确实需要自动备份或跨设备同步，再升级为服务端方案并迁移数据。
 
 ## Considered Options
