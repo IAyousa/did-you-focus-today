@@ -1,0 +1,61 @@
+:root{
+  --bg:#f6f7f9; --card:#ffffff; --text:#1c1e21; --muted:#6b7280;
+  --line:#e5e7eb; --accent:#e0533d; --accent-soft:#fbe9e5;
+  --green:#2f9e6e; --green-soft:#e3f4ec; --danger:#c0392b;
+  --focus-bg:#fdf1ee; --break-bg:#eef7f1;
+}
+:root[data-theme="dark"]{
+  --bg:#14161a; --card:#1e2128; --text:#e8eaed; --muted:#9aa0a6;
+  --line:#2c3038; --accent:#ef6b52; --accent-soft:#3a2621;
+  --green:#41b981; --green-soft:#1d3229; --danger:#e0705f;
+  --focus-bg:#2a211e; --break-bg:#1d2a24;
+}
+@media (prefers-color-scheme: dark){
+  :root[data-theme="auto"]{
+    --bg:#14161a; --card:#1e2128; --text:#e8eaed; --muted:#9aa0a6;
+    --line:#2c3038; --accent:#ef6b52; --accent-soft:#3a2621;
+    --green:#41b981; --green-soft:#1d3229; --danger:#e0705f;
+    --focus-bg:#2a211e; --break-bg:#1d2a24;
+  }
+}
+*{ box-sizing:border-box; }
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font:15px/1.6 system-ui,"Segoe UI","Microsoft YaHei",sans-serif;
+}
+.app{ max-width:680px; margin:0 auto; padding:20px 16px 48px; }
+.card{
+  background:var(--card); border:1px solid var(--line);
+  border-radius:14px; padding:16px; margin-bottom:14px;
+}
+h2{ font-size:15px; margin:0 0 10px; }
+h3{ font-size:13px; margin:14px 0 6px; color:var(--muted); }
+button{
+  background:var(--bg); color:var(--text); border:1px solid var(--line);
+  border-radius:10px; padding:10px 18px; font:inherit; cursor:pointer;
+}
+button:hover{ border-color:var(--muted); }
+button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+button.danger{ color:var(--danger); border-color:var(--danger); }
+button.ghost{ border-color:transparent; color:var(--muted); }
+button:disabled{ opacity:.5; cursor:default; }
+select, input[type="text"], input[type="number"]{
+  background:var(--bg); color:var(--text); border:1px solid var(--line);
+  border-radius:8px; padding:8px 10px; font:inherit;
+}
+.hint{ font-size:12px; color:var(--muted); margin:8px 0 0; }
+.empty{ color:var(--muted); font-size:13px; margin:0; }
+footer{
+  font-size:12px; color:var(--muted); text-align:center;
+  margin-top:20px; line-height:1.8;
+}
+.toast{
+  position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(80px);
+  background:var(--text); color:var(--bg); border-radius:10px; padding:10px 18px;
+  font-size:14px; max-width:90vw; transition:transform .3s; z-index:9;
+}
+.toast.show{ transform:translateX(-50%) translateY(0); }
+@media (max-width:520px){
+  .app{ padding:14px 10px 40px; }
+  .card{ padding:14px; border-radius:12px; }
+}

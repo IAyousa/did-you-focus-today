@@ -1,2 +1,4 @@
 .zcode/
 mattpocock-skills/
+app/node_modules/
+app/dist/
