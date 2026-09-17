@@ -1,6 +1,6 @@
 // 阶段状态机单例：idle → focus → alert(确认) → break → alert(知道了) → idle。
 // 诚实性规则由 ADR-0003 锁定：无暂停、只有放弃；未确认的专注不是番茄。
-import { reactive, computed, watchEffect } from 'vue';
+import { reactive, computed, watchEffect, watch } from 'vue';
 import { useStore } from './useStore';
 import { useNow } from './useNow';
 import { toast } from './useToast';
@@ -121,12 +121,12 @@ export function abandonFocus(){
 const remaining = computed(() => Math.max(0, ui.endsAt - now.value));
 const blink = computed(() => Math.floor(now.value / 500) % 2 === 0);
 
-/* 主时钟：到点流转 + 标签页标题 */
-setInterval(() => {
+/* 到点流转：由共享时钟驱动——时钟来自 Worker 心跳，后台标签页不被节流（ADR-0005） */
+watch(now, () => {
   if ((ui.phase === 'focus' || ui.phase === 'break') && ui.endsAt - now.value <= 0){
     toAlert(ui.phase === 'focus' ? 'focus' : 'break');
   }
-}, 250);
+});
 
 watchEffect(() => {
   if (ui.phase === 'focus' || ui.phase === 'break'){

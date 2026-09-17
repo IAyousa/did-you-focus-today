@@ -8,18 +8,21 @@ import TaskList from './components/TaskList.vue';
 import StatsPanel from './components/StatsPanel.vue';
 import DataPanel from './components/DataPanel.vue';
 import SettingsPanel from './components/SettingsPanel.vue';
+import HelpCard from './components/HelpCard.vue';
+import HelpContent from './components/HelpContent.vue';
 
 const { mode, cycle } = useTheme();
 const themeIcon = { auto: '💻', light: '☀️', dark: '🌙' };
 
-const notifSupported = typeof Notification !== 'undefined';
-const notifDefault = ref(notifSupported && Notification.permission === 'default');
-async function enableNotif(){
-  await Notification.requestPermission();
-  notifDefault.value = Notification.permission === 'default';
-}
-
 const t = useToast();
+
+/* 首次访问引导：看过就记下（独立于数据键，清掉浏览器数据会重新弹一次，属预期） */
+const GUIDE_KEY = 'did-you-focus-guide-v1';
+const showGuide = ref(!localStorage.getItem(GUIDE_KEY));
+function dismissGuide(){
+  showGuide.value = false;
+  localStorage.setItem(GUIDE_KEY, '1');
+}
 </script>
 
 <template>
@@ -27,7 +30,6 @@ const t = useToast();
     <header>
       <h1>🍅 今天你专注了吗？</h1>
       <div class="header-actions">
-        <button v-if="notifDefault" class="ghost" @click="enableNotif">🔔 桌面通知</button>
         <button class="ghost" title="切换主题" @click="cycle()">{{ themeIcon[mode] }}</button>
       </div>
     </header>
@@ -37,6 +39,7 @@ const t = useToast();
     <TaskList />
     <StatsPanel />
     <DataPanel />
+    <HelpCard />
     <SettingsPanel />
 
     <footer>
@@ -44,6 +47,14 @@ const t = useToast();
     </footer>
 
     <div class="toast" :class="{ show: t.show }">{{ t.msg }}</div>
+
+    <div v-if="showGuide" class="guide-overlay" @click.self="dismissGuide">
+      <div class="guide-card card">
+        <h2>🍅 欢迎，先花一分钟了解规则</h2>
+        <HelpContent />
+        <button class="primary guide-btn" @click="dismissGuide">知道了，开始专注</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -54,4 +65,12 @@ header{
 }
 h1{ font-size:20px; margin:0; }
 .header-actions{ display:flex; gap:6px; }
+.guide-overlay{
+  position:fixed; inset:0; background:rgba(0,0,0,.55);
+  display:flex; align-items:center; justify-content:center;
+  padding:16px; z-index:20;
+}
+.guide-card{ max-width:560px; width:100%; max-height:85vh; overflow-y:auto; }
+.guide-btn{ width:100%; margin-top:12px; }
 </style>
+
