@@ -7,12 +7,9 @@ const open = ref(false);
 </script>
 
 <template>
-  <details class="card help-card" :open="open" @toggle="open = $event.target.open">
+  <details class="card help-card" @toggle="open = $event.target.open">
     <summary>📖 使用说明</summary>
     <HelpContent v-if="open" />
   </details>
 </template>
 
-<style scoped>
-summary{ cursor:pointer; font-size:15px; font-weight:600; }
-</style>

@@ -4,28 +4,30 @@ import { ref } from 'vue';
 
 const now = ref(Date.now());
 
-let source = 'interval'; // 供冒烟测试确认实际走的是哪条心跳路径
+/* 'starting' = Worker 成败未知；降级守卫以此为前提，别改成 'interval' 当初值 */
+let source = 'starting';
+let workerRef = null;
 
+function adopt(next){
+  source = next;
+  if (import.meta.env.DEV) window.__nowSource = next;
+}
+
+/* 降级兜底：Worker 构造失败 / 加载出错 / 3 秒无首个 tick 时启用主线程心跳 */
 function fallback(){
-  if (source === 'interval') return;
-  source = 'interval';
-  if (import.meta.env.DEV) window.__nowSource = 'interval';
+  if (source !== 'starting') return;
+  if (workerRef){ try { workerRef.terminate(); } catch { /* 已死就算了 */ } workerRef = null; }
+  adopt('interval');
   setInterval(() => { now.value = Date.now(); }, 250);
 }
 
-if (import.meta.env.DEV) window.__nowSource = 'starting';
-
 try {
-  const worker = new Worker(new URL('../workers/tick.worker.js', import.meta.url), { type: 'module' });
-  worker.onmessage = (e) => {
-    if (source !== 'worker'){
-      source = 'worker';
-      if (import.meta.env.DEV) window.__nowSource = 'worker';
-    }
+  workerRef = new Worker(new URL('../workers/tick.worker.js', import.meta.url), { type: 'module' });
+  workerRef.onmessage = (e) => {
+    if (source !== 'worker') adopt('worker');
     now.value = e.data.t;
   };
-  worker.onerror = fallback;
-  /* 兜底：3 秒内没收到首个 tick（极端环境静默失败），退回主线程心跳 */
+  workerRef.onerror = fallback;
   setTimeout(fallback, 3000);
 } catch {
   fallback();

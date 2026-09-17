@@ -18,10 +18,13 @@ const t = useToast();
 
 /* 首次访问引导：看过就记下（独立于数据键，清掉浏览器数据会重新弹一次，属预期） */
 const GUIDE_KEY = 'did-you-focus-guide-v1';
-const showGuide = ref(!localStorage.getItem(GUIDE_KEY));
+function guideSeen(){
+  try { return !!localStorage.getItem(GUIDE_KEY); } catch { return true; } /* 隐私模式读不了就不打扰 */
+}
+const showGuide = ref(!guideSeen());
 function dismissGuide(){
   showGuide.value = false;
-  localStorage.setItem(GUIDE_KEY, '1');
+  try { localStorage.setItem(GUIDE_KEY, '1'); } catch { /* 存不了就每次都弹，无害 */ }
 }
 </script>
 

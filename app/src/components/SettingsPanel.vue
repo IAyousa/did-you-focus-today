@@ -21,6 +21,7 @@ function onChange(f){
 }
 
 /* ---------- 桌面通知状态 ---------- */
+const DENIED_HINT = '地址栏左侧 🔒 → 网站设置 → 通知 → 允许';
 const isAndroid = /Android/i.test(navigator.userAgent);
 const permission = ref('Notification' in window ? Notification.permission : 'n/a');
 const requesting = ref(false);
@@ -36,7 +37,7 @@ const notif = computed(() => {
     return { canAct: false, text: '已开启：切到别的标签页，到点也会弹通知提醒你' };
   }
   if (permission.value === 'denied'){
-    return { canAct: false, text: '已被浏览器拦截：地址栏左侧 🔒 → 网站设置 → 通知 → 允许' };
+    return { canAct: false, text: '已被浏览器拦截：' + DENIED_HINT };
   }
   return { canAct: true, text: '未开启：开启后切到别的标签页，到点也会弹通知提醒你' };
 });
@@ -48,7 +49,7 @@ async function requestNotif(){
     const result = await Notification.requestPermission();
     permission.value = result;
     if (result === 'granted') toast('桌面通知已开启 ✓');
-    else if (result === 'denied') toast('通知被浏览器拦截了：地址栏 🔒 → 网站设置 → 通知 → 允许');
+    else if (result === 'denied') toast('通知被浏览器拦截了：' + DENIED_HINT);
     else toast('未完成授权，可稍后再试（弹窗需要页面在前台时才会出现）');
   } finally {
     requesting.value = false;
@@ -81,7 +82,6 @@ async function requestNotif(){
 </template>
 
 <style scoped>
-summary{ cursor:pointer; font-size:15px; font-weight:600; }
 .notif-row{
   display:flex; align-items:center; gap:10px; flex-wrap:wrap;
   padding:10px 0; border-bottom:1px dashed var(--line); margin-bottom:12px;

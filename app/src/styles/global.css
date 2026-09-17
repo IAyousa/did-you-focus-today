@@ -28,6 +28,7 @@ body{
   background:var(--card); border:1px solid var(--line);
   border-radius:14px; padding:16px; margin-bottom:14px;
 }
+details.card > summary{ cursor:pointer; font-size:15px; font-weight:600; }
 h2{ font-size:15px; margin:0 0 10px; }
 h3{ font-size:13px; margin:14px 0 6px; color:var(--muted); }
 button{
