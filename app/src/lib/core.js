@@ -63,3 +63,63 @@ export function resolvePending(pending){
 export function breakKindAfter(cycleCompleted, settings){
   return cycleCompleted % settings.longEvery === 0 ? 'long' : 'short';
 }
+
+/*
+ * 各档位区间（含端点，hi=null 表示无上限），monthTier 与热力图图例共用：
+ * 改档位只改这里，图例区间不会与色阶漂移。tier>0 的区间从 1 起（0 只属于 tier 0）。
+ */
+export function tierRanges(goal){
+  const h = Math.floor(goal / 2);
+  return [
+    { tier: 0, lo: 0, hi: 0 },
+    { tier: 1, lo: 1, hi: h - 1 },
+    { tier: 2, lo: h, hi: goal - 1 },
+    { tier: 3, lo: goal, hi: goal * 2 - 1 },
+    { tier: 4, lo: goal * 2, hi: null },
+  ];
+}
+
+/*
+ * 月度热力图档位：色深锚定当前每日目标（达标日定义见 CONTEXT.md）。
+ * 0 / 1–<½目标 / ½目标–<目标 / 达标–<2×目标 / ≥2×目标。
+ * 标尺是现在时的目标：改目标会重刷历史颜色，有意为之，records 不存目标快照。
+ */
+export function monthTier(count, goal){
+  return tierRanges(goal).find(
+    ({ lo, hi }) => count >= lo && (hi === null || count <= hi),
+  ).tier;
+}
+
+/*
+ * 月视图网格（month 为 JS 惯例的 0 起）：周一起始，非本月格为 null。
+ * 每格含当日聚合（番茄数/分钟/中断——cut 不算番茄）、今日标记、未来禁用与档位；
+ * total/goalDays 为该月番茄总数与达标天数，跨月记录不计入。
+ */
+export function computeMonthGrid(records, year, month, goal, now){
+  const prefix = year + '-' + pad2(month + 1) + '-';
+  const byDay = new Map();
+  for (const r of records){
+    const k = dateKey(r.at);
+    if (!k.startsWith(prefix)) continue;
+    const d = +k.slice(8);
+    const agg = byDay.get(d) || { count: 0, min: 0, cuts: 0 };
+    if (r.t === 'focus'){ agg.count++; agg.min += r.min; }
+    else agg.cuts++;
+    byDay.set(d, agg);
+  }
+  const offset = (new Date(year, month, 1).getDay() + 6) % 7; // 周一挪到列首
+  const last = new Date(year, month + 1, 0).getDate();
+  const todayK = dateKey(now);
+  const cells = [];
+  let total = 0, goalDays = 0;
+  for (let i = 0; i < offset; i++) cells.push(null);
+  for (let d = 1; d <= last; d++){
+    const k = prefix + pad2(d);
+    const agg = byDay.get(d) || { count: 0, min: 0, cuts: 0 };
+    total += agg.count;
+    if (agg.count >= goal) goalDays++;
+    cells.push({ date: d, ...agg, tier: monthTier(agg.count, goal), today: k === todayK, future: k > todayK });
+  }
+  while (cells.length % 7) cells.push(null);
+  return { cells, total, goalDays };
+}

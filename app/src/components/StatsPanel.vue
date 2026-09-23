@@ -1,7 +1,8 @@
 <script setup>
-// 报表：四格指标 + 任务分布（累计）+ 最近 7 天趋势，全部由 useStats 派生
+// 报表：四格指标 + 月度热力图 + 任务分布（累计）+ 最近 7 天趋势，全部由 useStats 派生
 import { computed } from 'vue';
 import { useStats } from '../composables/useStats';
+import HeatmapCalendar from './HeatmapCalendar.vue';
 
 const stats = useStats();
 
@@ -25,6 +26,8 @@ function trendHeight(c){
       <div class="cell"><b>{{ fmtMin(stats.totalMin) }}</b><span>累计专注</span></div>
       <div class="cell"><b>{{ stats.streak }} 天</b><span>连续打卡</span></div>
     </div>
+
+    <HeatmapCalendar />
 
     <h3>任务分布（累计）</h3>
     <template v-if="stats.byTask.length">

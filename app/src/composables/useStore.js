@@ -38,7 +38,7 @@ export function normalize(raw){
     ? raw.tasks.filter(t => t && t.id && typeof t.name === 'string' && t.name.trim()).slice(0, 50)
     : [];
   const records = Array.isArray(raw && raw.records)
-    ? raw.records.filter(r => r && (r.t === 'focus' || r.t === 'cut')).slice(-5000)
+    ? raw.records.filter(r => r && (r.t === 'focus' || r.t === 'cut')).slice(-10000) /* 热力图月份导航要翻旧账，上限从 5000 提至 10000（约 8 年）防最旧记录静默消失 */
     : [];
   return { ...d, settings: s, tasks, records };
 }
